@@ -1,22 +1,62 @@
 import { useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import { DataGrid, GridColDef, GridValueGetterParams } from '@mui/x-data-grid';
-import { getAllusers } from '../services/user';
+import { DataGrid } from '@mui/x-data-grid';
+import { getAllusers, deleteUser, updateUser } from '../services/user';
+import DeleteModal from './delete';
+import EditModal from './edit';
+
 
 const BaisTable = () => {
 
   const [users, setUsers] = useState([]);
+  const [open, setOpen] = useState(false);
+  const [openEdit, setOpenEdit] = useState(false);
+  const [selectedUser, setSelectedUser] = useState();
+  const [selectedRows, setSelectedRows] = useState([]);
+  const [refresh, setRefresh] = useState(0);
 
   const setAllUsers = () => {
     getAllusers().then(users => setUsers(users.data));
   }
 
+
   useEffect(() => {
     setAllUsers()
-  }, [])
+  }, [refresh]);
 
 
+  const handelEditModal = () => {
+    setOpenEdit(true);
+  }
+  const handleCloseEditModal = () => {
+    setOpenEdit(false);
+  }
+
+  const handelEdit = () => {
+    updateUser(selectedUser).then(() => {
+      setOpenEdit(false);
+      setRefresh(refresh + 1);
+    }
+    );
+  }
+
+  const handelDeleteModal = () => {
+    setOpen(true);
+  }
+
+  const handleCloseModal = () => {
+    setOpen(false)
+  }
+
+  const handleDelete = () => {
+    deleteUser(selectedRows[0].id).then(() => {
+      setAllUsers();
+      setRefresh(refresh + 1);
+      setOpen(false);
+    }
+    )
+  }
 
   const columns = [
     {
@@ -54,13 +94,6 @@ const BaisTable = () => {
       filter: true,
       sortable: true,
     },
-    // {
-    //   headerName: 'تاریخ ایجاد',
-    //   field: 'createdAt',
-    //   width: 150,
-    //   filter: true,
-    //   sortable: true,
-    // },
     {
       field: "hobbys",
       headerName: "Action",
@@ -68,11 +101,11 @@ const BaisTable = () => {
       width: 160,
       renderCell: () => (
         <span style={{ display: "flex" }}>
-          <Button variant="contained" color="primary">
-            Edit
+          <Button variant="contained" color="primary" onClick={handelEditModal}>
+            ویرایش
           </Button>
-          <Button variant="contained" color="secondary">
-            Del
+          <Button variant="contained" color="secondary" onClick={handelDeleteModal}>
+            حذف
           </Button>
         </span>
       )
@@ -84,11 +117,11 @@ const BaisTable = () => {
   return (<>
     <Box sx={{
       height: 400,
-      width: '70%',
+      width: 800,
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'center',
-      justifyItems:'center',
+      justifyItems: 'center',
       margin: 'auto',
     }}>
       <DataGrid
@@ -96,9 +129,27 @@ const BaisTable = () => {
         columns={columns}
         pageSize={5}
         rowsPerPageOptions={[5]}
-        disableSelectionOnClick
+        onSelectionModelChange={(ids) => {
+          const selectedIDs = new Set(ids);
+          const selectedRows = users.filter((row) =>
+            selectedIDs.has(row.id),
+          );
+          setSelectedRows(selectedRows);
+          setSelectedUser(selectedRows[0]);
+        }}
       />
     </Box>
+    <DeleteModal
+      handleCloseModal={handleCloseModal}
+      open={open}
+      handleDelete={handleDelete}
+    />
+    <EditModal
+      handleCloseEditModal={handleCloseEditModal}
+      open={openEdit}
+      handleEdit={handelEdit}
+      selectedUser={selectedUser}
+    />
   </>)
 }
 export default BaisTable;
